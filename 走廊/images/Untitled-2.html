@@ -1,0 +1,278 @@
+<!doctype html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>悦来客栈 · 宋韵夜游 · 贴图版</title>
+<style>
+:root{--paper:#d9c49a;--ink:#38291b;--green:#23443b;--gold:#c7a566}
+*{box-sizing:border-box}html,body,#app{width:100%;height:100%;margin:0;overflow:hidden}
+body{background:var(--paper);color:var(--ink);font-family:"STKaiti","KaiTi","Microsoft YaHei",serif}
+canvas{display:block;width:100%;height:100%}
+#top{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:3;padding:9px 22px;background:#23443bef;color:#f0d9a5;border:3px double #c6a15f;letter-spacing:4px;white-space:nowrap;pointer-events:none}
+#nav{position:fixed;left:18px;top:18px;z-index:6;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:9px;background:#e4d1a9ed;border:3px double #a9854d;box-shadow:0 5px 18px #2a1b1033}
+#mapToggle{min-width:94px;padding:10px 14px;background:#23443b;color:#f0d9a5;border:1px solid #c6a15f;font:inherit;letter-spacing:3px;cursor:pointer}
+#mapToggle:after{content:"  ▾";font-size:11px}
+#nav.open #mapToggle:after{content:"  ▴"}
+#mapOptions{display:none;flex-direction:column;gap:6px}
+#nav.open #mapOptions{display:flex}
+#mapOptions button{min-width:94px;padding:9px 12px;background:#23443b;color:#f0d9a5;border:1px solid #c6a15f;font:inherit;letter-spacing:2px;cursor:pointer}
+#mapOptions button.active{background:#8c3e2a;color:#fff0cf}
+#mapOptions button:disabled{opacity:.45;cursor:wait}
+#hint{position:fixed;z-index:4;left:50%;bottom:25px;transform:translateX(-50%);padding:12px 24px;min-width:260px;text-align:center;color:#f5e5bf;background:#23443b;border:3px double #c6a15f;box-shadow:0 5px 20px #24170e3b;letter-spacing:2px;pointer-events:none}
+#shade{position:fixed;inset:0;background:#100b07;opacity:0;pointer-events:none;z-index:8}
+#roomUI{position:fixed;inset:0;z-index:10;display:none;opacity:0;transition:opacity .45s;background-color:#d7c194;background-image:radial-gradient(ellipse at 20% 20%,#f3e2b8 0,transparent 55%),repeating-linear-gradient(90deg,#805b3310 0 2px,transparent 2px 82px);color:#3c2919}
+#roomTitle{position:absolute;top:3%;left:50%;transform:translateX(-50%);z-index:3;padding:12px 34px;white-space:nowrap;background:#23443b;color:#f0d9a5;border:4px double #c6a15f;font-size:25px;letter-spacing:6px}
+#roomFrame{position:absolute;inset:13% 6% 9%;border:12px solid #59381f;outline:3px solid #b89555;background:linear-gradient(#d9c39a 0 66%,#8b6039 66%);overflow:hidden}
+#roomFrame:before{content:"";position:absolute;inset:0 0 30%;background:repeating-linear-gradient(90deg,transparent 0 100px,#624323 102px 109px),linear-gradient(#e2d0aa,#b18b5a)}
+#roomFrame:after{content:"";position:absolute;left:0;right:0;bottom:0;height:30%;background:repeating-linear-gradient(0deg,transparent 0 34px,#54371f 35px 38px),repeating-linear-gradient(90deg,#9b7447 0 130px,#604023 132px 136px)}
+.obj{position:absolute;z-index:2;border:5px solid #54351f;box-shadow:0 7px 14px #39271944}
+#bed{left:9%;bottom:22%;width:39%;height:29%;background:#7c3e2b}#bed:after{content:"";position:absolute;inset:9% 5%;background:#e6d5b1;border:5px solid #b38b52}
+#table{right:13%;bottom:30%;width:24%;height:10%;background:#80532f}#chair{right:18%;bottom:17%;width:14%;height:13%;background:#76502e}
+#lamp{position:absolute;z-index:3;right:20%;bottom:43%;width:28px;height:45px;background:#f3bd63;border:3px solid #a36c2e;border-radius:45%;box-shadow:0 0 30px 12px #f7ae4444}
+#caption{position:absolute;bottom:20px;left:24px;z-index:3;color:#f0d8a6;text-shadow:0 1px 4px #392719}
+#return{position:absolute;right:25px;bottom:20px;z-index:4;padding:12px 24px;background:#23443b;border:2px solid #c6a15f;color:#f3dfb7;font:inherit;cursor:pointer}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:2;box-shadow:inset 0 0 110px #39271845}
+@media(max-width:600px){#top{font-size:12px;letter-spacing:2px;top:12px}#nav{left:8px;top:8px;padding:6px;gap:5px}#mapToggle,#mapOptions button{min-width:72px;padding:7px 8px;font-size:13px}#hint{width:90%;min-width:0;font-size:14px}}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="vignette"></div><div id="top">悦 来 客 栈 · 宋 韵 夜 游</div>
+<nav id="nav" aria-label="客栈地图"><button id="mapToggle" aria-expanded="false" aria-controls="mapOptions">地图</button><div id="mapOptions"><button data-area="floor1" class="active">一楼</button><button data-area="floor2">二楼</button><button data-area="roof">屋顶</button></div></nav>
+<div id="hint">点击木门进入悦来客栈</div><div id="shade"></div>
+<div id="roomUI"><div id="roomTitle">后厨</div><div id="roomFrame"><div id="bed" class="obj"></div><div id="table" class="obj"></div><div id="chair" class="obj"></div><div id="lamp"></div></div><div id="caption">悦来客栈 · 灯火可亲</div><button id="return">返回走廊</button></div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+const $=s=>document.querySelector(s),hint=$("#hint"),shade=$("#shade"),roomUI=$("#roomUI");
+const scene=new THREE.Scene();scene.background=new THREE.Color("#cbb58a");scene.fog=new THREE.Fog("#cbb58a",20,45);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,100);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;$("#app").appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffe6bf,1.5));
+
+/* ==========================================
+   🎨 图片加载系统：替换为你自己的图
+   ========================================== */
+const loader = new THREE.TextureLoader();
+// 默认颜色，防止你还没放图片时报错
+const fallbackColor = new THREE.Color("#a98460");
+
+function loadTex(url, repeatX = 1, repeatY = 1) {
+    const tex = loader.load(url, undefined, undefined, (err) => {
+        console.warn(`找不到图片 ${url}，使用默认颜色代替。`);
+    });
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(repeatX, repeatY);
+    return tex;
+}
+
+// 1. 墙壁图（repeat 设置了平铺次数，避免拉伸）
+const wallTex = loadTex('images/wall.jpg', 2, 2);
+// 2. 地板图
+const floorTex = loadTex('images/floor.jpg', 4, 4);
+// 3. 柱子/横梁木纹图
+const woodTex = loadTex('images/wood.jpg', 1, 4);
+// 4. 门的图（最好是带透明背景的 PNG，这样门框才好看）
+const doorTex = loadTex('images/door.png', 1, 1);
+// 5. 门外石板图
+const stoneTex = loadTex('images/stone.jpg', 8, 8);
+
+const M={
+    // 墙壁
+    wall:new THREE.MeshStandardMaterial({map:wallTex,color:0xffffff,roughness:0.9}),
+    // 木柱
+    wood:new THREE.MeshStandardMaterial({map:woodTex,color:0xffffff,roughness:.8}),
+    // 深色木梁
+    dark:new THREE.MeshStandardMaterial({map:woodTex,color:0x664433,roughness:.9}),
+    // 门（开启透明通道，方便你放抠图）
+    door:new THREE.MeshStandardMaterial({map:loadTex('images/door.png'),color:0xffffff,roughness:.8,side:THREE.DoubleSide}),
+    // 地板
+    floor:new THREE.MeshStandardMaterial({map:floorTex,color:0xffffff,roughness:.8}),
+    // 饰品材质保持不变
+    gold:new THREE.MeshStandardMaterial({color:"#b99656",roughness:.42,metalness:.25}),
+    red:new THREE.MeshStandardMaterial({color:"#8d3428"}),
+    green:new THREE.MeshStandardMaterial({color:"#29473e"}),
+    stone:new THREE.MeshStandardMaterial({map:stoneTex,color:0xffffff,roughness:1})
+};
+
+/* 渲染牌匾文字（这个纯代码生成，不用你找图） */
+function tex(draw,w=512,h=512){const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");draw(x,w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+function box(p,n,s,pos,m){const o=new THREE.Mesh(new THREE.BoxGeometry(...s),m);o.name=n;o.position.set(...pos);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function lamp(p,pos,power=2.2,range=8){const l=new THREE.PointLight(0xffb85f,power,range);l.position.set(...pos);p.add(l)}
+function plaque(p,text,pos,size=[1,.3]){const t=tex((c,w,h)=>{c.fillStyle="#29473e";c.fillRect(0,0,w,h);c.strokeStyle="#c6a15f";c.lineWidth=7;c.strokeRect(8,8,w-16,h-16);c.strokeStyle="#dfc58d";c.lineWidth=2;c.strokeRect(18,18,w-36,h-36);c.fillStyle="#f1dba8";c.textAlign="center";c.textBaseline="middle";c.font="bold 52px KaiTi,serif";c.fillText(text,w/2,h/2)},512,150);const o=new THREE.Mesh(new THREE.PlaneGeometry(...size),new THREE.MeshBasicMaterial({map:t,side:THREE.DoubleSide}));o.position.set(...pos);p.add(o);return o}
+function lantern(p,x,y,z){const g=new THREE.Group();g.position.set(x,y,z);p.add(g);box(g,"灯笼顶帽",[.43,.08,.34],[0,.28,0],M.dark);box(g,"朱红灯笼",[.34,.48,.29],[0,0,0],M.red);box(g,"灯笼底托",[.4,.07,.32],[0,-.27,0],M.gold);box(g,"流苏",[.035,.24,.035],[0,-.42,0],M.gold);lamp(p,[x,y,z+.3],2.4,7)}
+function lattice(p,x,y,z){for(let i=0;i<5;i++)box(p,"窗格竖木",[.035,.8,.035],[x-.3+i*.15,y,z],M.dark);for(let i=0;i<4;i++)box(p,"窗格横木",[.62,.035,.035],[x,y-.3+i*.2,z],M.dark)}
+
+const outside=new THREE.Group(),floor1=new THREE.Group(),stairsGroup=new THREE.Group(),floor2=new THREE.Group(),stairsDownGroup=new THREE.Group(),roof=new THREE.Group();
+outside.name="客栈门外";floor1.name="一楼走廊";stairsGroup.name="一楼上行楼梯";floor2.name="二楼走廊";stairsDownGroup.name="二楼下行楼梯";roof.name="屋顶大阳台";
+scene.add(outside,floor1,stairsGroup,floor2,stairsDownGroup,roof);
+floor1.visible=stairsGroup.visible=floor2.visible=stairsDownGroup.visible=roof.visible=false;
+
+/* 阶段1：首页门外立面，墙体分块留出真实门洞 */
+box(outside,"左墙体",[4.2,4.4,.32],[-3.1,2.2,-.2],M.wall);box(outside,"右墙体",[4.2,4.4,.32],[3.1,2.2,-.2],M.wall);box(outside,"门上墙体",[2,2.15,.32],[0,3.33,-.2],M.wall);
+box(outside,"门面横梁",[2.25,.2,.38],[0,2.35,-.05],M.dark);box(outside,"屋檐",[7.1,.16,.65],[0,4.47,-.18],M.dark);box(outside,"屋檐金线",[7.2,.035,.68],[0,4.55,-.2],M.gold);
+for(const x of [-1,1]){box(outside,"门框立柱",[.15,2.35,.3],[x,1.17,-.05],M.dark);box(outside,"门框金线",[.035,2.15,.025],[x+(x<0?.09:-.09),1.18,.105],M.gold)}
+box(outside,"门楣",[2.15,.15,.3],[0,2.3,-.05],M.dark);box(outside,"门槛",[2,.09,.32],[0,.045,0],M.gold);plaque(outside,"悦来客栈",[0,2.78,.015],[1.65,.36]);lantern(outside,-1.55,3.35,.08);lantern(outside,1.55,3.35,.08);lattice(outside,-2.1,1.7,-.01);lattice(outside,2.1,1.7,-.01);
+box(outside,"石板庭院",[16,.16,16],[0,-.12,4],M.stone);
+const entrance=new THREE.Group();entrance.position.set(-.88,0,.015);outside.add(entrance);const entryPanel=box(entrance,"入口木门",[1.76,2.2,.095],[.88,1.12,0],M.door);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(.105,.018,8,24),M.gold);ring.position.set(.88,1.05,.078);entrance.add(ring);const entryHit=new THREE.Mesh(new THREE.BoxGeometry(1.8,2.25,.24),new THREE.MeshBasicMaterial({transparent:true,opacity:0,side:THREE.DoubleSide}));entryHit.position.set(.88,1.12,0);entrance.add(entryHit);const entryBase=M.door.color.clone();
+
+/* 阶段3：走廊、六扇门。 */
+const doors=[];
+function roomDoor(parent, x, z, label, side, floorName) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = side === "left" ? Math.PI / 2 : -Math.PI / 2;
+    parent.add(g);
+
+    // 1. 你的平面门贴图
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.4), M.door);
+    panel.position.set(0, 1.2, 0.02); 
+    g.add(panel);
+
+    // 2. 隐形点击热区（用来触发进屋）
+    const hit = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 2.4, 0.2), 
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide })
+    );
+    hit.position.set(0, 1.2, 0); 
+    g.add(hit);
+
+    // 3. 把门的信息存进数组，保留原有的逻辑
+    doors.push({ 
+        kind: "room", 
+        label, 
+        group: g, 
+        panel, 
+        hit, 
+        base: M.door.color.clone(), 
+        floorName 
+    });
+}
+
+function buildCorridor(group,names,floorName){
+const w=5.6,start=1,end=-13,mid=-6;
+box(group,"木地板",[w,.18,14],[0,-.1,mid],M.floor);
+box(group,"左侧木墙",[.16,3.4,14],[-w/2,1.6,mid],M.wall);
+box(group,"右侧木墙",[.16,3.4,14],[w/2,1.6,mid],M.wall);
+box(group,"木梁天花板",[w,.18,14],[0,3.3,mid],M.dark);
+for(let z=start;z>=end;z-=2.5){
+  box(group,"天花横梁",[w,.16,.18],[0,3.2,z],M.dark);
+  for(const x of [-w/2+.1,w/2-.1]){
+    box(group,"木柱",[.14,3.2,.14],[x,1.55,z],M.wood);
+    box(group,"柱脚铜饰",[.2,.12,.2],[x,.06,z],M.gold);
+  }
+}
+const placements=[
+  {x:-w/2+.09,z:-2.3,side:"left",label:names[0]},
+  {x:w/2-.09,z:-6.8,side:"right",label:names[1]},
+  {x:-w/2+.09,z:-10.7,side:"left",label:names[2]}
+];
+for(const d of placements) roomDoor(group,d.x,d.z,d.label,d.side,floorName);
+for(let z=-2;z>=-11;z-=3){lantern(group,-w/2+.4,2.55,z);lantern(group,w/2-.4,2.55,z)}
+box(group,"尽头左墙垛",[1.35,3.4,.18],[-2.125,1.6,end],M.wall);
+box(group,"尽头右墙垛",[1.35,3.4,.18],[2.125,1.6,end],M.wall);
+box(group,"登楼入口横梁",[2.9,.25,.24],[0,3.18,end],M.dark);
+plaque(group,floorName==="floor1"?"拾级登楼":"下楼回廊",[0,2.72,end+.14],[2.0,.34]);
+group.add(new THREE.AmbientLight(0xffd7a0,.5));lamp(group,[0,2.3,-2],1.5,10);
+}
+buildCorridor(floor1,["后厨","大堂","酒窖"],"floor1");buildCorridor(floor2,["诗书间","刺绣房","天工阁"],"floor2");
+
+/* 楼梯 */
+function buildStaircase(group,goingUp=true){
+  box(group,"楼梯入口平台",[2.8,.18,2.0],[0,-.02,-11.65],M.wood);
+  for(let i=0;i<6;i++){
+    const z=-12.15-i*.34; const y=.10+i*.19;
+    box(group,"下段楼梯踏步",[1.72,.16,.42],[0,y,z],M.floor);
+    box(group,"下段踏步金边",[1.72,.025,.035],[0,y+.085,z+.18],M.gold);
+  }
+  box(group,"楼梯转向平台",[2.15,.18,1.35],[0,1.18,-14.0],M.wood);
+  for(let i=0;i<6;i++){
+    const z=-13.55+i*.34; const y=1.27+i*.19;
+    box(group,"上段楼梯踏步",[1.55,.16,.42],[.24,y,z],M.floor);
+    box(group,"上段踏步金边",[1.55,.025,.035],[.24,y+.085,z+.18],M.gold);
+  }
+  for(const x of [-.98,.98]){
+    box(group,"下段楼梯扶手",[.11,.12,2.35],[x,.82,-13.0],M.dark);
+    for(let i=0;i<6;i++)box(group,"下段扶手立柱",[.075,.58,.075],[x,.38+i*.09,-12.15-i*.34],M.wood);
+  }
+  for(const x of [-.68,1.16]){
+    box(group,"上段楼梯扶手",[.11,.12,2.25],[x,1.95,-13.55],M.dark);
+    for(let i=0;i<6;i++)box(group,"上段扶手立柱",[.075,.58,.075],[x,1.55+i*.075,-13.55+i*.34],M.wood);
+  }
+  box(group,"楼梯侧面封板",[.12,1.05,2.5],[-1.12,.58,-13.0],M.dark);
+  plaque(group,goingUp?"拾级登楼":"循阶而下",[0,2.55,-13.25],[1.45,.32]);
+  lamp(group,[0,2.2,-12.8],2.5,8);
+}
+buildStaircase(stairsGroup,true); buildStaircase(stairsDownGroup,false);
+const stairHit=new THREE.Mesh(new THREE.BoxGeometry(2.8,3.0,3.0),new THREE.MeshBasicMaterial({transparent:true,opacity:0,side:THREE.DoubleSide}));
+stairHit.position.set(0,1.35,-12.6);stairHit.name="staircase-up-interaction";stairsGroup.add(stairHit);
+const stairDownHit=new THREE.Mesh(new THREE.BoxGeometry(2.8,3.0,3.0),new THREE.MeshBasicMaterial({transparent:true,opacity:0,side:THREE.DoubleSide}));
+stairDownHit.position.set(0,1.35,-12.6);stairDownHit.name="staircase-down-interaction";stairsDownGroup.add(stairDownHit);
+
+/* 屋顶区域 */
+box(roof,"屋顶阳台地板",[12,.22,11],[0,-.12,-5],M.floor);
+for(const x of [-5.8,5.8])box(roof,"阳台侧围栏",[.16,1.0,11],[x,.38,-5],M.dark);
+box(roof,"阳台后围栏",[12,1,.16],[0,.38,-10.4],M.dark);
+box(roof,"阳台前围栏",[12,1,.16],[0,.38,.4],M.dark);
+for(let x=-5.4;x<=5.4;x+=.9){ for(const z of [-10.35,.35])box(roof,"围栏栏杆",[.07,.75,.08],[x,.35,z],M.gold); }
+box(roof,"大长桌桌面",[7.2,.18,1.45],[0,1.0,-4.7],M.dark);
+for(const x of [-3.1,3.1])for(const z of [-5.15,-4.25])box(roof,"长桌桌腿",[.16,.9,.16],[x,.48,z],M.wood);
+for(const z of [-5.9,-3.5]){
+  box(roof,"长凳座面",[7,.12,.38],[0,.58,z],M.wood);
+  for(const x of [-3,0,3])box(roof,"长凳腿",[.12,.55,.12],[x,.28,z],M.dark);
+}
+plaque(roof,"临风雅集",[0,2.2,-9.95],[2.0,.42]);
+for(const x of [-4.9,4.9]){ box(roof,"阳台灯笼架",[.09,2.2,.09],[x,1,-8.8],M.dark); lantern(roof,x,2.0,-8.8); }
+roof.add(new THREE.AmbientLight(0xffd7a0,.65)); lamp(roof,[0,3,-5],2.4,12);
+
+/* 动画工具 */
+function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function animate(ms,fn,done=()=>{}){const start=performance.now();function step(now){const t=Math.min(1,(now-start)/ms);fn(ease(t));if(t<1)requestAnimationFrame(step);else done()}requestAnimationFrame(step)}
+function V(p,l){return {p:new THREE.Vector3(...p),l:new THREE.Vector3(...l)}}
+function setView(v){camera.position.copy(v.p);camera.lookAt(v.l)}
+function tweenView(a,b,ms,done=()=>{}){animate(ms,t=>{camera.position.lerpVectors(a.p,b.p,t);camera.lookAt(a.l.clone().lerp(b.l,t))},done)}
+function fadeTo(val,ms,done=()=>{}){const from=Number(shade.style.opacity||0);animate(ms,t=>shade.style.opacity=String(THREE.MathUtils.lerp(from,val,t)),done)}
+const outsideView=V([0,1.65,5.5],[0,1.65,0]),firstView=V([0,1.65,.8],[0,1.65,-5.5]),secondView=V([0,1.65,.8],[0,1.65,-5.5]),roofView=V([0,2.0,2.0],[0,1.3,-5.0]);setView(outsideView);
+function setNavActive(area){document.querySelectorAll("#mapOptions button").forEach(b=>b.classList.toggle("active",b.dataset.area===area))}
+const nav=$("#nav"),mapToggle=$("#mapToggle");
+mapToggle.addEventListener("click",()=>{const open=nav.classList.toggle("open");mapToggle.setAttribute("aria-expanded",String(open))});
+function setRegion(area){
+  outside.visible=false;floor1.visible=area==="floor1";stairsGroup.visible=area==="floor1";
+  floor2.visible=area==="floor2";stairsDownGroup.visible=area==="floor2";roof.visible=area==="roof";
+  state=area;setNavActive(area);
+  if(area==="floor1"){setView(firstView);hint.textContent="一楼 · 后厨（左）/ 大堂（右）/ 酒窖（左）· 点击尽头楼梯上二楼"}
+  else if(area==="floor2"){setView(secondView);hint.textContent="二楼 · 诗书间（左）/ 刺绣房（右）/ 天工阁（左）· 点击尽头楼梯返回一楼"}
+  else {setView(roofView);hint.textContent="屋顶阳台 · 大长桌 · 点击左上角导航切换区域"}
+}
+document.querySelectorAll("#mapOptions button").forEach(b=>b.addEventListener("click",()=>{
+  if(busy||state==="room")return;
+  busy=true;const area=b.dataset.area;
+  fadeTo(1,180,()=>{setRegion(area);nav.classList.remove("open");mapToggle.setAttribute("aria-expanded","false");fadeTo(0,220,()=>{busy=false})});
+}));
+let state="outside",busy=false,hover=null,previousFloor="floor1",savedView=null,yaw=0,dragStart=null,dragged=false;
+function enterInn(){if(busy||state!=="outside")return;busy=true;state="entering";hint.textContent="推开木门……";document.body.style.cursor="default";animate(1000,t=>entrance.rotation.y=-Math.PI/2*t);setTimeout(()=>{const start=V([0,1.65,4.2],[0,1.65,-1]);fadeTo(1,300,()=>{outside.visible=false;floor1.visible=true;stairsGroup.visible=true;floor2.visible=false;stairsDownGroup.visible=false;roof.visible=false;setNavActive("floor1");setView(start);fadeTo(0,300,()=>tweenView(start,firstView,2000,()=>{state="floor1";busy=false;hint.textContent="一楼 · 后厨 / 大堂 / 酒窖 · 点击尽头楼梯上二楼"}))})},450)}
+function changeFloor(){if(busy||!(state==="floor1"||state==="floor2"))return;busy=true;const up=state==="floor1";state="changingFloor";hint.textContent=up?"走近楼梯，转过平台拾级而上……":"沿折返楼梯下行，回到一楼……";const from=V(camera.position.toArray(),camera.position.clone().add(new THREE.Vector3(0,0,-5)).toArray());const approach=V([0,1.55,-9.7],[0,1.45,-12.4]);tweenView(from,approach,550,()=>{const turn=V([up?-.45: .45,1.9,-12.8],[up?.45:-.45,2.0,-13.7]);tweenView(approach,turn,650,()=>fadeTo(1,280,()=>{setRegion(up?"floor2":"floor1");const landing=up?V([0,1.65,.8],[0,1.65,-5.5]):V([0,1.65,.8],[0,1.65,-5.5]);setView(landing);fadeTo(0,300,()=>{busy=false})}))})}
+function enterRoom(d){if(busy||d.kind!=="room"||d.floorName!==state)return;busy=true;previousFloor=state;savedView=V(camera.position.toArray(),camera.position.clone().add(new THREE.Vector3(0,0,-5)).toArray());state="approach";hint.textContent="正在进入："+d.label;const from=V(camera.position.toArray(),camera.position.clone().add(new THREE.Vector3(0,0,-5)).toArray()),world=new THREE.Vector3();d.group.getWorldPosition(world);const side=d.group.rotation.y>0?1:-1,target=V([world.x+side*1.5,1.55,world.z],[world.x,1.55,world.z]);tweenView(from,target,1000,()=>{$("#roomTitle").textContent=d.label;$("#caption").textContent=({"后厨":"后厨 · 炉火正旺","大堂":"大堂 · 宾客盈门","酒窖":"酒窖 · 陈酿飘香","诗书间":"诗书间 · 墨香清远","刺绣房":"刺绣房 · 锦线生花","天工阁":"天工阁 · 巧艺天成"})[d.label];$("#bed").style.background=({"后厨":"#9a6232","大堂":"#9b7650","酒窖":"#633b27","诗书间":"#3f5748","刺绣房":"#9b5145","天工阁":"#886344"})[d.label];$("#chair").style.display=d.label==="后厨"?"none":"block";roomUI.style.display="block";requestAnimationFrame(()=>roomUI.style.opacity="1");hint.style.display="none";state="room";busy=false})}
+$("#return").addEventListener("click",()=>{if(busy||state!=="room")return;busy=true;roomUI.style.opacity="0";setTimeout(()=>{roomUI.style.display="none";hint.style.display="block";state="returning";tweenView(V(camera.position.toArray(),camera.position.clone().add(new THREE.Vector3(0,0,-5)).toArray()),savedView,1000,()=>{state=previousFloor;busy=false;hint.textContent=state==="floor1"?"一楼 · 后厨（左）/ 大堂（右）/ 酒窖（左）· 点击尽头楼梯上二楼":state==="floor2"?"二楼 · 诗书间（左）/ 刺绣房（右）/ 天工阁（左）· 点击楼梯返回一楼":"屋顶阳台 · 大长桌"})},460)});
+
+const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+function pick(e){const r=renderer.domElement.getBoundingClientRect();mouse.x=(e.clientX-r.left)/r.width*2-1;mouse.y=-(e.clientY-r.top)/r.height*2+1;raycaster.setFromCamera(mouse,camera);
+if(state==="outside")return raycaster.intersectObject(entryHit,false).length?{kind:"entrance"}:null;
+if(state==="floor1"||state==="floor2"){
+  const active=doors.filter(d=>d.floorName===state),hits=raycaster.intersectObjects(active.map(d=>d.hit),false);
+  if(hits.length)return active.find(d=>d.hit===hits[0].object)||null;
+  if(state==="floor1"&&stairsGroup.visible&&raycaster.intersectObject(stairHit,false).length)return{kind:"stairs"};
+  if(state==="floor2"&&stairsDownGroup.visible&&raycaster.intersectObject(stairDownHit,false).length)return{kind:"stairs"};
+}
+return null}
+function clearHover(){if(hover?.kind==="entrance")entryPanel.material.color.copy(entryBase);if(hover?.kind==="room")hover.panel.material.color.copy(hover.base)}
+function updateHover(item){if(hover===item)return;clearHover();hover=item;if(item?.kind==="entrance"){entryPanel.material.color.set("#956d42");document.body.style.cursor="pointer";hint.textContent="点击木门进入悦来客栈"}else if(item?.kind==="stairs"){document.body.style.cursor="pointer";hint.textContent=state==="floor1"?"点击楼梯前往二楼":"点击楼梯返回一楼"}else if(item?.kind==="room"){item.panel.material.color.set("#956d42");document.body.style.cursor="pointer";hint.textContent="点击进入："+item.label}else{document.body.style.cursor="default";hint.textContent=state==="outside"?"点击木门进入悦来客栈":state==="floor1"?"一楼 · 后厨（左）/ 大堂（右）/ 酒窖（左）· 点击尽头楼梯上二楼":state==="floor2"?"二楼 · 诗书间（左）/ 刺绣房（右）/ 天工阁（左）· 点击楼梯返回一楼":"屋顶阳台 · 大长桌"}}
+renderer.domElement.addEventListener("pointerdown",e=>{if(!busy){dragStart={x:e.clientX,y:e.clientY};dragged=false}});
+renderer.domElement.addEventListener("pointermove",e=>{if(busy||state==="room")return;if(dragStart&&(state==="floor1"||state==="floor2")){const dx=e.clientX-dragStart.x,dy=e.clientY-dragStart.y;if(Math.abs(dx)+Math.abs(dy)>3)dragged=true;if(dragged){yaw=THREE.MathUtils.clamp(yaw-dx*.003,-Math.PI/6,Math.PI/6);dragStart={x:e.clientX,y:e.clientY};camera.position.x=Math.sin(yaw)*.8;camera.lookAt(camera.position.x+Math.sin(yaw)*6,1.65,camera.position.z-6*Math.cos(yaw));return}}updateHover(pick(e))});
+window.addEventListener("pointerup",()=>dragStart=null);
+renderer.domElement.addEventListener("click",e=>{if(busy||dragged)return;const o=pick(e);if(!o)return;if(o.kind==="entrance")enterInn();else if(o.kind==="stairs")changeFloor();else if(o.kind==="room")enterRoom(o)});
+renderer.domElement.addEventListener("wheel",e=>{if(busy||!(state==="floor1"||state==="floor2"))return;e.preventDefault();const dir=new THREE.Vector3();camera.getWorldDirection(dir);camera.position.addScaledVector(dir,-Math.sign(e.deltaY)*.12)},{passive:false});
+window.addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2))});
+function render(){requestAnimationFrame(render);renderer.render(scene,camera)}render();
+</script></body></html>
